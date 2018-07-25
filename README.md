@@ -20,8 +20,9 @@ fmt.Println(u.CanonicalString())
 fmt.Println(u.DenseString())
 
 // Serialize to SQL.  Defaults to a string like "@EeiKtHe5nOqWqBheD61jNQ",
-// but you can also serialize as a canonical UUID string, a lexical-order
-// BLOB, or even a standard-order BLOB, depending on u.SetPreferences.
+// but you can also serialize as a canonical UUID string (plus several
+// variants thereof), a lexical-order BLOB, or even a standard-order BLOB,
+// depending on u.SetPreferences.
 db.Exec(`INSERT INTO table (uuid) VALUES (?)`, u)
 
 // Choose serialization preferences for this UUID object.
@@ -81,7 +82,8 @@ big-endian order, followed by the sequence number in big-endian order, then
 finally the MAC address.
 
 (You could argue that "MAC address then sequence number" makes *slightly* more
-sense, but it's kind of a wash either way.)
+sense, but it's kind of a wash either way, and it's fairly rare for two UUIDs
+generated on two different machines to share the same 100ns clock tick.)
 
 After we reorder the bytes for SQL, the new UUID anatomy looks like this:
 
@@ -101,6 +103,34 @@ After we reorder the bytes for SQL, the new UUID anatomy looks like this:
     | aa bb | cc dd | ee ff gg hh | ii jj | kk ll mm nn oo pp |
     +-------+-------+-------------+-------+-------------------+
 ```
+
+### Base-64 representation
+
+That's all well and good, but what if we don't want a BLOB? Suppose we require
+that our PRIMARY KEY be some string that can be copy-pasted from a terminal.
+What's a good textual representation for a UUID that uses this lexical byte
+order?
+
+Well, encoding binary data in a textual format is kind of a solved problem.
+Why not use base-64? It already provides a pure-ASCII encoding with only 33%
+blowup, much better than the 100+% blowup of the canonical UUID text format.
+And if we prepend some distinctive ASCII character from outside the base-64
+repertoire, such as "@", then we get a very quick way of determining which
+parser to use. So we move the bytes around to big-endian lexical order, then
+write a single "@", then write the base-64 representation of the lexical
+bytes. The length is implicit (a UUID is exactly 16 bytes), so we don't need
+any padding characters.
+
+Examples:
+
+    331a90da-9013-11e8-aad2-42010a800002 => @EeiQEzMakNqq0kIBCoAAAg
+    335984e8-9013-11e8-aad2-42010a800002 => @EeiQEzNZhOiq0kIBCoAAAg
+
+Result: 36 characters becomes 23, for a 56% savings, AND the new text format
+has the property that two temporally-ordered V1 UUIDs will sort correctly
+after text conversion.
+
+### Automatic inference of byte order
 
 As it turns out, there's *just* enough structure in a UUID that we can make an
 educated guess about which order a BLOB was serialized in:
