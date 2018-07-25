@@ -105,7 +105,7 @@ func (uuid UUID) Preferences() Preferences {
 
 // SetPreferences updates the preference knobs for this object.
 func (uuid *UUID) SetPreferences(pref Preferences) {
-	uuid.b = pref.collapse()
+	uuid.b = pref.collapse(uuid.getBits())
 }
 
 // SetNil updates this UUID to hold the Nil UUID.

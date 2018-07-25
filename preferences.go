@@ -162,12 +162,12 @@ func (pref Preferences) String() string {
 	return string(buf[:])
 }
 
-func (pref Preferences) collapse() (x bits) {
+func (pref Preferences) collapse(old bits) (x bits) {
 	x = bitValid
 
 	switch pref.Value {
 	case 0:
-		x |= bitsDefault.just(bitValueIsBinary)
+		x |= old.just(bitValueIsBinary)
 	case Text:
 		// pass
 	case Binary:
@@ -178,7 +178,7 @@ func (pref Preferences) collapse() (x bits) {
 
 	switch pref.Binary {
 	case 0:
-		x |= bitsDefault.just(bitsBinary)
+		x |= old.just(bitsBinary)
 	case StandardOnly:
 		// pass
 	case StandardFirst:
@@ -193,7 +193,7 @@ func (pref Preferences) collapse() (x bits) {
 
 	switch pref.Text {
 	case 0:
-		x |= bitsDefault.just(bitsText)
+		x |= old.just(bitsText)
 	case Canonical:
 		x |= textModeCanonical
 	case HashLike:
