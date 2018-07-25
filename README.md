@@ -1,2 +1,120 @@
 # go-uuid
-[WIP] Go implementation of V1 UUIDs with SQL-friendly representations
+
+A database-friendly implementation of Universally Unique Identifiers for Go.
+
+[![Build Status](https://travis-ci.org/chronos-tachyon/go-uuid.svg?branch=master)](https://travis-ci.org/chronos-tachyon/go-uuid)
+[![GoDoc](https://godoc.org/github.com/chronos-tachyon/go-uuid?status.svg)](https://godoc.org/github.com/chronos-tachyon/go-uuid)
+
+## Quick Start
+
+```
+import "github.com/chronos-tachyon/go-uuid"
+
+// Generate a new version 1 UUID
+u := uuid.New()
+
+// Print the UUID as a string like "77b99cea-8ab4-11e8-96a8-185e0fad6335".
+fmt.Println(u.CanonicalString())
+
+// Print the UUID as a string like "@EeiKtHe5nOqWqBheD61jNQ".
+fmt.Println(u.DenseString())
+
+// Serialize to SQL.  Defaults to a string like "@EeiKtHe5nOqWqBheD61jNQ",
+// but you can also serialize as a canonical UUID string, a lexical-order
+// BLOB, or even a standard-order BLOB, depending on u.SetPreferences.
+db.Exec(`INSERT INTO table (uuid) VALUES (?)`, u)
+
+// Choose serialization preferences for this UUID object.
+u.SetPreferences(uuid.Preferences{
+  // Pick whether u.Value() returns text or a BLOB.
+  Value:  uuid.Binary,
+
+  // Pick whether BLOB serializations use lexical or standard byte ordering.
+  // Also selects BLOBs deserialization behavior, as it can make guesses.
+  Binary: uuid.DenseFirst,
+
+  // Pick which format to use for text serializations.
+  // Does not affect text deserialization; all formats are always recognized.
+  Text:   uuid.Dense,
+})
+
+// Deserialize from SQL.
+row := db.QueryRow(`SELECT uuid FROM table LIMIT 1`)
+row.Scan(&u)
+```
+
+## What's it about?
+
+This is a fully-featured UUID library in Golang, comparable to the excellent
+[github.com/satori/go.uuid](https://github.com/satori/go.uuid).  However, one
+thing that I found lacking about satori's package is that, like all other UUID
+implementations that I've found for Go, it isn't very friendly for use in SQL
+databases.
+
+"But chronos, satori's package supports sql.Scanner and driver.Valuer!"
+
+Ah yes, but the standard *byte order* for UUIDs, codified in RFC 4122, is
+a poor choice for use in indexed columns. In fact, if you try to use a
+standard UUID as a `PRIMARY KEY`, you're going to tank your database
+performance and spend years wondering what happened.
+
+The fundamental issue is that the standard byte order for UUIDs puts the
+fields in the wrong order, particularly if you're using Version 1 (time-based)
+UUIDs.
+
+Here's a quick anatomy lesson of a V1 UUID:
+
+```
+          timestamp = aa bb cc dd ee ff gg hh (60 bits plus 4-bit version)
+    sequence number =                   ii jj (14 bits plus 2-bit variant)
+        MAC address =       kk ll mm nn oo pp (48 bits)
+
+    +-------------+-------+-------+-------+-------------------+
+    | ee ff gg hh | cc dd | aa bb | ii jj | kk ll mm nn oo pp |
+    +-------------+-------+-------+-------+-------------------+
+```
+
+Notice how the timestamp gets scrambled? That hurts SQL performance because
+SQL indexes are happy when keys are strictly increasing and very, very sad
+when they are not.  The ideal would be to have the timestamp in pure
+big-endian order, followed by the sequence number in big-endian order, then
+finally the MAC address.
+
+(You could argue that "MAC address then sequence number" makes *slightly* more
+sense, but it's kind of a wash either way.)
+
+After we reorder the bytes for SQL, the new UUID anatomy looks like this:
+
+```
+             out[0] = in[6]
+             out[1] = in[7]
+             out[2] = in[4]
+             out[3] = in[5]
+             out[4] = in[0]
+             out[5] = in[1]
+             out[6] = in[2]
+             out[7] = in[3]
+                    |
+      ______________|____________
+     /                           \
+    +-------+-------+-------------+-------+-------------------+
+    | aa bb | cc dd | ee ff gg hh | ii jj | kk ll mm nn oo pp |
+    +-------+-------+-------------+-------+-------------------+
+```
+
+As it turns out, there's *just* enough structure in a UUID that we can make an
+educated guess about which order a BLOB was serialized in:
+
+- The version field (top 4 bits of "aa") is always a value between 0001 and
+  0101, i.e. 5 values out of 15. That gives a 31.25% chance of a false
+  positive.
+
+- The variant field (top 2 bits of "ii") is always 10xx xxxx. At 1 value out
+  of 4, that gives a 25% chance of a false positive.
+
+- The probabilities are independent, so they combine as 7.8125%.
+
+Future versions of this package will likely attempt to reduce the false
+positive chances by considering which timestamp values are likely vs unlikely.
+The permitted timestamp values begin in 1582 CE and span a range of 3,600
+years, making most values *very* improbable.
