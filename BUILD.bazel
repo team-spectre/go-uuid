@@ -1,0 +1,41 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+load("@bazel_gazelle//:def.bzl", "gazelle")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "doc.go",
+        "error.go",
+        "format.go",
+        "generator.go",
+        "implementation.go",
+        "preferences.go",
+        "slicereader.go",
+        "slicewriter.go",
+        "uuid.go",
+        "variant.go",
+        "version.go",
+    ],
+    importpath = "github.com/chronos-tachyon/go-uuid",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = [
+        "error_test.go",
+        "generator_test.go",
+        "preferences_test.go",
+        "uuid_test.go",
+        "variant_test.go",
+        "version_test.go",
+    ],
+    embed = [":go_default_library"],
+)
+
+gazelle(
+    name = "gazelle",
+    command = "fix",
+    external = "vendored",
+    prefix = "github.com/chronos-tachyon/go-uuid",
+)
