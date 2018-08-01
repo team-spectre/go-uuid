@@ -147,7 +147,14 @@ educated guess about which order a BLOB was serialized in:
 
 - The probabilities are independent, so they combine as 7.8125%.
 
-Future versions of this package will likely attempt to reduce the false
-positive chances by considering which timestamp values are likely vs unlikely.
-The permitted timestamp values begin in 1582 CE and span a range of 3,600
-years, making most values *very* improbable.
+- Timestamps before 1970-01-01 or after the current date plus 5 years are
+  soft-rejected as implausible. The probability of landing in that timestamp
+  range by chance will grow over time, but by 2100-01-01 it will only be
+  0.2309%. That is also an independent probability, so the odds of reaching
+  this point by chance are 0.0180%.
+
+- In the extremely rare event that both interpretations have correct version
+  bits, correct variant bits, AND plausible timestamps, the timestamp is
+  reimagined as a probability by assuming a normal distribution with the
+  current time as mean and one century as standard deviation.  The most
+  probable interpretation is then preferred.

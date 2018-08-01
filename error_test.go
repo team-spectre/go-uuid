@@ -6,14 +6,14 @@ import (
 
 func TestParseError(t *testing.T) {
 	type testrow struct {
-		testName string
-		typeName string
+		testName   string
+		typeName   string
 		methodName string
-		input []byte
-		isText bool
-		detailFmt string
+		input      []byte
+		isText     bool
+		detailFmt  string
 		detailArgs []interface{}
-		expected string
+		expected   string
 	}
 	data := []testrow{
 		{
@@ -21,49 +21,49 @@ func TestParseError(t *testing.T) {
 			expected: `uuid: failed to parse`,
 		},
 		{
-			testName: "top-level function",
+			testName:   "top-level function",
 			methodName: "Func",
-			expected: `uuid.Func: failed to parse`,
+			expected:   `uuid.Func: failed to parse`,
 		},
 		{
-			testName: "method",
-			typeName: "Class",
+			testName:   "method",
+			typeName:   "Class",
 			methodName: "Func",
-			expected: `uuid.Class.Func: failed to parse`,
+			expected:   `uuid.Class.Func: failed to parse`,
 		},
 		{
-			testName: "basic text",
-			typeName: "Class",
+			testName:   "basic text",
+			typeName:   "Class",
 			methodName: "Func",
-			input: []byte(`some text`),
-			isText: true,
-			expected: `uuid.Class.Func: failed to parse "some text"`,
+			input:      []byte(`some text`),
+			isText:     true,
+			expected:   `uuid.Class.Func: failed to parse "some text"`,
 		},
 		{
-			testName: "basic bytes",
-			typeName: "Class",
+			testName:   "basic bytes",
+			typeName:   "Class",
 			methodName: "Func",
-			input: []byte{0xde, 0xad, 0xca, 0xfe},
-			isText: false,
-			expected: `uuid.Class.Func: failed to parse [de ad ca fe]`,
+			input:      []byte{0xde, 0xad, 0xca, 0xfe},
+			isText:     false,
+			expected:   `uuid.Class.Func: failed to parse [de ad ca fe]`,
 		},
 		{
-			testName: "detail",
-			typeName: "Class",
+			testName:   "detail",
+			typeName:   "Class",
 			methodName: "Func",
-			input: []byte{0xde, 0xad, 0xca, 0xfe},
-			isText: false,
-			detailFmt: "%q %#02x",
+			input:      []byte{0xde, 0xad, 0xca, 0xfe},
+			isText:     false,
+			detailFmt:  "%q %#02x",
 			detailArgs: []interface{}{"string", 64},
-			expected: `uuid.Class.Func: failed to parse [de ad ca fe]: "string" 0x40`,
+			expected:   `uuid.Class.Func: failed to parse [de ad ca fe]: "string" 0x40`,
 		},
 		{
-			testName: "detail no input",
-			typeName: "Class",
+			testName:   "detail no input",
+			typeName:   "Class",
 			methodName: "Func",
-			detailFmt: "%q %#02x",
+			detailFmt:  "%q %#02x",
 			detailArgs: []interface{}{"string", 64},
-			expected: `uuid.Class.Func: failed to parse: "string" 0x40`,
+			expected:   `uuid.Class.Func: failed to parse: "string" 0x40`,
 		},
 	}
 
@@ -83,12 +83,12 @@ func TestParseError(t *testing.T) {
 
 func TestTypeError(t *testing.T) {
 	type testrow struct {
-		testName string
-		typeName string
+		testName   string
+		typeName   string
 		methodName string
-		input interface{}
-		dummies []interface{}
-		expected string
+		input      interface{}
+		dummies    []interface{}
+		expected   string
 	}
 	data := []testrow{
 		{
@@ -96,37 +96,37 @@ func TestTypeError(t *testing.T) {
 			expected: `uuid: wrong type`,
 		},
 		{
-			testName: "top-level function",
+			testName:   "top-level function",
 			methodName: "Func",
-			expected: `uuid.Func: wrong type`,
+			expected:   `uuid.Func: wrong type`,
 		},
 		{
-			testName: "method",
-			typeName: "Class",
+			testName:   "method",
+			typeName:   "Class",
 			methodName: "Func",
-			expected: `uuid.Class.Func: wrong type`,
+			expected:   `uuid.Class.Func: wrong type`,
 		},
 		{
-			testName: "basic type",
-			typeName: "Class",
+			testName:   "basic type",
+			typeName:   "Class",
 			methodName: "Func",
-			input: uint64(0),
-			expected: `uuid.Class.Func: wrong type uint64`,
+			input:      uint64(0),
+			expected:   `uuid.Class.Func: wrong type uint64`,
 		},
 		{
-			testName: "custom type",
-			typeName: "Class",
+			testName:   "custom type",
+			typeName:   "Class",
 			methodName: "Func",
-			input: &TypeError{},
-			expected: `uuid.Class.Func: wrong type *uuid.TypeError`,
+			input:      &TypeError{},
+			expected:   `uuid.Class.Func: wrong type *uuid.TypeError`,
 		},
 		{
-			testName: "dummy list",
-			typeName: "Class",
+			testName:   "dummy list",
+			typeName:   "Class",
 			methodName: "Func",
-			input: uint64(0),
-			dummies: []interface{}{new(bool), new(string), []byte(nil), &TypeError{}},
-			expected: `uuid.Class.Func: wrong type uint64: expected one of *bool *string []uint8 *uuid.TypeError`,
+			input:      uint64(0),
+			dummies:    []interface{}{new(bool), new(string), []byte(nil), &TypeError{}},
+			expected:   `uuid.Class.Func: wrong type uint64: expected one of *bool *string []uint8 *uuid.TypeError`,
 		},
 	}
 

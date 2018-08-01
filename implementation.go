@@ -3,8 +3,10 @@ package uuid
 import (
 	"database/sql/driver"
 	"encoding/base64"
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"math"
 )
 
 var (
@@ -277,39 +279,101 @@ func valueImpl(in []byte, x bits) driver.Value {
 }
 
 func unmarshalBinary(typeName, methodName string, out, in []byte, x bits) error {
-	var f func(_, _ Version) Version
-	var g func(_, _ []byte)
+	preferDense := false
 	switch x.just(bitsBinary) {
 	case 0:
-		f = pickStandard
-		g = importStandard
+		f := pickStandard
+		g := importStandard
+		return unmarshalBinaryHelper(typeName, methodName, out, in, f, g)
 
 	case bitBinaryIsDense:
-		f = pickDense
-		g = importDense
-
-	case bitBinaryIsLoose:
-		versionStandard, versionDense, _ := extract(in)
-		validStandard := versionStandard.IsValid()
-		validDense := versionDense.IsValid()
-		f = pickStandard
-		g = importStandard
-		if validDense && !validStandard {
-			f = pickDense
-			g = importDense
-		}
+		f := pickDense
+		g := importDense
+		return unmarshalBinaryHelper(typeName, methodName, out, in, f, g)
 
 	case bitBinaryIsDense | bitBinaryIsLoose:
-		versionStandard, versionDense, _ := extract(in)
-		validStandard := versionStandard.IsValid()
-		validDense := versionDense.IsValid()
-		f = pickDense
-		g = importDense
-		if validStandard && !validDense {
-			f = pickStandard
-			g = importStandard
-		}
+		preferDense = true
 	}
+
+	versionStandard, versionDense, _ := extract(in)
+	validStandard := versionStandard.IsValid()
+	validDense := versionDense.IsValid()
+
+	// +-----+---------------+------------+-------------+----------------------+
+	// | row | validStandard | validDense | preferDense | outcome              |
+	// +-----+---------------+------------+-------------+----------------------+
+	// | A   | false         | false      | false       | standard (forced)    |
+	// | B   | false         | false      | true        | dense    (forced)    |
+	// | C   | false         | true       | false       | dense                |
+	// | D   | false         | true       | true        | dense                |
+	// | E   | true          | false      | false       | standard             |
+	// | F   | true          | false      | true        | standard             |
+	// | G   | true          | true       | false       | standard if p0 >= p1 |
+	// | H   | true          | true       | true        | dense    if p1 >= p0 |
+	// +-----+---------------+------------+-------------+----------------------+
+
+	if !validStandard && (validDense || preferDense) {
+		// B, C, D
+		f := pickDense
+		g := importDense
+		return unmarshalBinaryHelper(typeName, methodName, out, in, f, g)
+	}
+
+	if !validDense {
+		// A, E, F [B already covered]
+		f := pickStandard
+		g := importStandard
+		return unmarshalBinaryHelper(typeName, methodName, out, in, f, g)
+	}
+
+	// Only G and H remain
+
+	timeStandard := binary.BigEndian.Uint64([]byte{
+		in[6],
+		in[7],
+		in[4],
+		in[5],
+		in[0],
+		in[1],
+		in[2],
+		in[3],
+	})
+	timeStandard &= tickMask
+
+	timeDense := binary.BigEndian.Uint64(in[0:8])
+	timeDense &= tickMask
+
+	// Timestamp was generated between [1970-01-01] and [now + 5 years]? 0 < p < 1
+	// Timestamp out of range? p = 0
+	now := systemTick()
+	t0 := uint64(tickEpoch)
+	t1 := now + (5 * tickYear)
+
+	var probStandard, probDense float64
+	if timeStandard >= t0 && timeStandard <= t1 {
+		probStandard = tickProbability(timeStandard, now)
+	}
+	if timeDense >= t0 && timeDense <= t1 {
+		probDense = tickProbability(timeDense, now)
+	}
+
+	// Bias the preferred interpretation very slightly.
+	// Only swings things when the larger is no more than 17/16ths of the smaller.
+	bias := math.Min(probStandard, probDense) * 0.0625
+	if preferDense {
+		probDense += bias
+	} else {
+		probStandard += bias
+	}
+
+	if probStandard < probDense || (probStandard == probDense && preferDense) {
+		f := pickDense
+		g := importDense
+		return unmarshalBinaryHelper(typeName, methodName, out, in, f, g)
+	}
+
+	f := pickStandard
+	g := importStandard
 	return unmarshalBinaryHelper(typeName, methodName, out, in, f, g)
 }
 
@@ -437,7 +501,7 @@ func unmarshalTextStandard(typeName, methodName string, out []byte, r *sliceRead
 	if w.Remain() > 0 {
 		i := r.CurrentOffset()
 		in := r.slice[0:r.j]
-		more := w.Remain() * 2 - partialCount
+		more := w.Remain()*2 - partialCount
 		return makeParseError(typeName, methodName, in, true).detailf("unexpected end of input at position %d, expected %d more hex digits", i, more)
 	}
 
@@ -535,7 +599,7 @@ func unmarshalTextDense(typeName, methodName string, out []byte, r *sliceReader)
 	if w.Remain() > 0 {
 		i := r.CurrentOffset()
 		in := r.slice[0:r.j]
-		more := (w.Remain() / 3) * 4 - partialCount
+		more := (w.Remain()/3)*4 - partialCount
 		return makeParseError(typeName, methodName, in, true).detailf("unexpected end of input at position %d, expected %d more base-64 digits", i, more)
 	}
 
@@ -562,4 +626,16 @@ func scanImpl(typeName, methodName string, out, in []byte, isDefinitelyText bool
 		return unmarshalText(typeName, methodName, out, in)
 	}
 	return unmarshalBinary(typeName, methodName, out, in, x)
+}
+
+func tickProbability(value, now uint64) float64 {
+	x := float64(now - value)
+	if value > now {
+		x = float64(value - now)
+	}
+	x /= tickCentury
+
+	const a float64 = 1.0 / (math.Sqrt2 * math.SqrtPi)
+	b := -0.5 * math.Pow(x, 2.0)
+	return a * math.Exp(b)
 }

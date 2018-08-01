@@ -386,6 +386,15 @@ func TestUnmarshalBinary(t *testing.T) {
 		0x0f, 0xad, 0x63, 0x35,
 	}
 
+	text0 := "11d3c015-c015-11d3-96a8-185e0fad6335"
+	text1 := "c01511d3-c015-11d3-96a8-185e0fad6335"
+	ambiguousBytes := []byte{
+		0x11, 0xd3, 0xc0, 0x15,
+		0xc0, 0x15, 0x11, 0xd3,
+		0x96, 0xa8, 0x18, 0x5e,
+		0x0f, 0xad, 0x63, 0x35,
+	}
+
 	type testrow struct {
 		input   []byte
 		order   BinaryMode
@@ -402,6 +411,11 @@ func TestUnmarshalBinary(t *testing.T) {
 		{denseBytes, DenseOnly, true, text},
 		{denseBytes, StandardFirst, true, text},
 		{denseBytes, DenseFirst, true, text},
+
+		{ambiguousBytes, StandardOnly, true, text0},
+		{ambiguousBytes, StandardFirst, true, text0},
+		{ambiguousBytes, DenseOnly, true, text1},
+		{ambiguousBytes, DenseFirst, true, text1},
 	}
 	for _, row := range data {
 		pref := bitsDefault.expand()

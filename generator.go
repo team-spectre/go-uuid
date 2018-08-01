@@ -21,11 +21,14 @@ func globalState() *state {
 	return gState
 }
 
-// Number of 100ns ticks between UUID epoch (Oct 15, 1582) and Unix epoch (Jan 1, 1970)
-const tickEpoch = 122192928000000000
+// Number of 100ns ticks per year
+const tickYear = 315569520000000
 
 // Number of 100ns ticks per 100 years
-const tickCentury = 31556952000000000
+const tickCentury = 100 * tickYear
+
+// Number of 100ns ticks between UUID epoch (Oct 15, 1582) and Unix epoch (Jan 1, 1970)
+const tickEpoch = 122192928000000000
 
 const tickMask = (1 << 60) - 1
 
