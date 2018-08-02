@@ -5,8 +5,9 @@ A database-friendly implementation of Universally Unique Identifiers for Go.
 [![License](https://img.shields.io/github/license/chronos-tachyon/go-uuid.svg?maxAge=86400)](https://github.com/chronos-tachyon/go-uuid/blob/master/LICENSE)
 [![GoDoc](https://godoc.org/github.com/chronos-tachyon/go-uuid?status.svg)](https://godoc.org/github.com/chronos-tachyon/go-uuid)
 [![Build Status](https://img.shields.io/travis/chronos-tachyon/go-uuid.svg?maxAge=3600&logo=travis)](https://travis-ci.org/chronos-tachyon/go-uuid)
-[![Issues](https://img.shields.io/github/issues/chronos-tachyon/go-uuid.svg?maxAge=86400&logo=github)](https://github.com/chronos-tachyon/go-uuid/issues)
-[![Pull Requests](https://img.shields.io/github/issues-pr/chronos-tachyon/go-uuid.svg?maxAge=86400&logo=github)](https://github.com/chronos-tachyon/go-uuid/pulls)
+[![Coverage Status](https://img.shields.io/coveralls/github/chronos-tachyon/go-uuid.svg?maxAge=3600&logo=travis)](https://coveralls.io/github/chronos-tachyon/go-uuid)
+[![Issues](https://img.shields.io/github/issues/chronos-tachyon/go-uuid.svg?maxAge=7200&logo=github)](https://github.com/chronos-tachyon/go-uuid/issues)
+[![Pull Requests](https://img.shields.io/github/issues-pr/chronos-tachyon/go-uuid.svg?maxAge=7200&logo=github)](https://github.com/chronos-tachyon/go-uuid/pulls)
 
 ## Quick Start
 

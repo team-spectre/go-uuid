@@ -1,6 +1,7 @@
 package uuid
 
 import (
+	"encoding/hex"
 	"fmt"
 	"testing"
 )
@@ -310,4 +311,52 @@ func TestGenerate(t *testing.T) {
 	test("31bc4002-7f1d-11e8-bffd-aabbccddeeff")
 	test("31bc4003-7f1d-11e8-bffe-aabbccddeeff")
 	test("31bc4003-7f1d-11e8-bfff-aabbccddeeff")
+}
+
+func TestIsSuitable(t *testing.T) {
+	type testrow struct {
+		input    []byte
+		expected bool
+	}
+	data := []testrow{
+		{
+			input:    []byte{0x54, 0xee, 0x75, 0x81, 0x2f, 0xc9},
+			expected: true,
+		},
+		{
+			input:    []byte{0x54, 0xee, 0x75, 0x81, 0x2f},
+			expected: false,
+		},
+		{
+			input:    []byte{0x54, 0xee, 0x75, 0x81, 0x2f, 0xc9, 0x00},
+			expected: false,
+		},
+		{
+			input:    []byte{0x41, 0x01, 0x0a, 0x80, 0x00, 0x02},
+			expected: false,
+		},
+		{
+			input:    []byte{0x42, 0x01, 0x0a, 0x80, 0x00, 0x02},
+			expected: false,
+		},
+		{
+			input:    []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+			expected: false,
+		},
+	}
+
+	for _, row := range data {
+		name := hex.EncodeToString(row.input)
+		t.Run(name, func(t *testing.T) {
+			actual := isSuitable(row.input)
+			if row.expected != actual {
+				t.Errorf("expected isSuitable=%v, got %v", row.expected, actual)
+			}
+		})
+	}
+}
+
+func TestSystemGenerate(t *testing.T) {
+	g := globalState()
+	g.generate(make([]byte, 16))
 }
