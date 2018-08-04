@@ -16,6 +16,8 @@ var (
 	closeBracket = []byte(`}`)
 )
 
+var allZeroes [ByteLength]byte
+
 type pair struct{ i, j uint }
 
 var hashlikePairs = []pair{
@@ -397,6 +399,11 @@ func unmarshalBinaryHelper(
 	f func(_, _ Version) Version,
 	g func(_, _ []byte),
 ) error {
+	if len(in) == 0 || equalBytes(allZeroes[:], in) {
+		zeroBytes(out)
+		return nil
+	}
+
 	versionStandard, versionDense, variant := extract(in)
 	version := f(versionStandard, versionDense)
 	if !version.IsValid() {
