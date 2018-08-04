@@ -225,7 +225,7 @@ const (
 )
 
 const (
-	bitsDefault    = bitValid | bitBinaryIsDense | bitTextIsDense | textModeCanonical
+	bitsDefault    = bitValid | bitBinaryIsDense | bitBinaryIsLoose | bitTextIsDense
 	bitsBinary     = bitBinaryIsDense | bitBinaryIsLoose
 	bitsText       = bitTextIsDense | bitTextIsModeX | bitTextIsModeY
 	bitsTextIsMode = bitTextIsModeX | bitTextIsModeY
