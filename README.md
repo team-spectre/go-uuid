@@ -8,6 +8,7 @@ A database-friendly implementation of Universally Unique Identifiers for Go.
 [![Coverage Status](https://img.shields.io/coveralls/github/chronos-tachyon/go-uuid.svg?maxAge=3600&logo=travis)](https://coveralls.io/github/chronos-tachyon/go-uuid)
 [![Issues](https://img.shields.io/github/issues/chronos-tachyon/go-uuid.svg?maxAge=7200&logo=github)](https://github.com/chronos-tachyon/go-uuid/issues)
 [![Pull Requests](https://img.shields.io/github/issues-pr/chronos-tachyon/go-uuid.svg?maxAge=7200&logo=github)](https://github.com/chronos-tachyon/go-uuid/pulls)
+[![Latest Release](https://img.shields.io/github/release/chronos-tachyon/go-uuid.svg?maxAge=2592000&logo=github)](https://github.com/chronos-tachyon/go-uuid/releases)
 
 ## Quick Start
 
