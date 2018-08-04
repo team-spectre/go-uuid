@@ -344,8 +344,10 @@ func (uuid *UUID) UnmarshalText(in []byte) error {
 // It attempts to parse a JSON value as a textual UUID representation.
 func (uuid *UUID) UnmarshalJSON(in []byte) error {
 	var ptr *string
-	if err := json.Unmarshal(in, &ptr); err != nil {
-		return makeParseError("UUID", "UnmarshalJSON", in, true).detailf("json.Unmarshal: %v", err)
+	if len(in) != 0 {
+		if err := json.Unmarshal(in, &ptr); err != nil {
+			return makeParseError("UUID", "UnmarshalJSON", in, true).detailf("json.Unmarshal: %v", err)
+		}
 	}
 	var str string
 	if ptr != nil {

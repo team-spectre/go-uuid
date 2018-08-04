@@ -26,7 +26,10 @@ go_test(
     srcs = [
         "error_test.go",
         "generator_test.go",
+        "implementation_test.go",
         "preferences_test.go",
+        "slicereader_test.go",
+        "slicewriter_test.go",
         "uuid_test.go",
         "variant_test.go",
         "version_test.go",

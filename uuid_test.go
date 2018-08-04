@@ -7,23 +7,25 @@ import (
 	"testing"
 )
 
-func TestUUID(t *testing.T) {
+func TestUUID_RoundTripping(t *testing.T) {
 	type testrow struct {
 		name          string
 		dense         string
 		version       Version
 		variant       Variant
-		isTimeBased   bool
+		isValid       bool
+		isV1          bool
 		standardBytes [ByteLength]byte
 		denseBytes    [ByteLength]byte
 	}
 	data := []testrow{
 		{
-			name:        "00000000-0000-0000-0000-000000000000",
-			dense:       "@AAAAAAAAAAAAAAAAAAAAAA",
-			version:     0,
-			variant:     0,
-			isTimeBased: false,
+			name:    "00000000-0000-0000-0000-000000000000",
+			dense:   "@AAAAAAAAAAAAAAAAAAAAAA",
+			version: 0,
+			variant: 0,
+			isValid: false,
+			isV1:    false,
 			standardBytes: [...]byte{
 				0x00, 0x00, 0x00, 0x00,
 				0x00, 0x00, 0x00, 0x00,
@@ -38,11 +40,12 @@ func TestUUID(t *testing.T) {
 			},
 		},
 		{
-			name:        "77b99cea-8ab4-11e8-96a8-185e0fad6335",
-			dense:       "@EeiKtHe5nOqWqBheD61jNQ",
-			version:     V1,
-			variant:     VariantRFC4122,
-			isTimeBased: true,
+			name:    "77b99cea-8ab4-11e8-96a8-185e0fad6335",
+			dense:   "@EeiKtHe5nOqWqBheD61jNQ",
+			version: V1,
+			variant: VariantRFC4122,
+			isValid: true,
+			isV1:    true,
 			standardBytes: [...]byte{
 				0x77, 0xb9, 0x9c, 0xea,
 				0x8a, 0xb4, 0x11, 0xe8,
@@ -57,11 +60,12 @@ func TestUUID(t *testing.T) {
 			},
 		},
 		{
-			name:        "4baaf498-5125-4934-9822-483fd50b16c0",
-			dense:       "@STRRJUuq9JiYIkg/1QsWwA",
-			version:     V4,
-			variant:     VariantRFC4122,
-			isTimeBased: false,
+			name:    "4baaf498-5125-4934-9822-483fd50b16c0",
+			dense:   "@STRRJUuq9JiYIkg/1QsWwA",
+			version: V4,
+			variant: VariantRFC4122,
+			isValid: true,
+			isV1:    false,
 			standardBytes: [...]byte{
 				0x4b, 0xaa, 0xf4, 0x98,
 				0x51, 0x25, 0x49, 0x34,
@@ -135,18 +139,10 @@ func TestUUID(t *testing.T) {
 				return
 			}
 
-			version, variant := uuid.VersionAndVariant()
-			if row.version != version {
-				t.Errorf("wrong Version: expected %v, got %v", row.version, version)
-			}
-			if row.variant != variant {
-				t.Errorf("wrong Variant: expected %v, got %v", row.variant, variant)
-			}
-
-			isTimeBased := uuid.IsV1()
-			if row.isTimeBased != isTimeBased {
-				t.Errorf("wrong IsV1: expected %v, got %v", row.isTimeBased, isTimeBased)
-			}
+			checkVersion(t, "", row.version, uuid)
+			checkVariant(t, "", row.variant, uuid)
+			checkValid(t, "", row.isValid, uuid)
+			checkV1(t, "", row.isV1, uuid)
 
 			for _, subrow := range subdata0 {
 				subname := fmt.Sprintf("FromString-%s", subrow.name)
@@ -188,7 +184,7 @@ func TestUUID(t *testing.T) {
 					checkBinary(t, "StandardBytes", row.standardBytes[:], dupe.StandardBytes())
 					checkBinary(t, "DenseBytes", row.denseBytes[:], dupe.DenseBytes())
 					checkBinary(t, "MarshalBinary", byteRep, justBytes(dupe.MarshalBinary()))
-					checkVariant(t, "Value", valueRep, justVariant(dupe.Value()))
+					checkValue(t, "Value", valueRep, justValue(dupe.Value()))
 
 					checkString(t, "Format %d", row.dense, fmt.Sprintf("%d", dupe))
 					checkString(t, "Format %s", textRep, fmt.Sprintf("%s", dupe))
@@ -210,7 +206,109 @@ func TestUUID(t *testing.T) {
 	}
 }
 
-func TestFromString(t *testing.T) {
+func TestUUID_BasicOps(t *testing.T) {
+	text := "77b99cea-8ab4-11e8-96a8-185e0fad6335"
+	standardBytes := []byte{
+		0x77, 0xb9, 0x9c, 0xea,
+		0x8a, 0xb4, 0x11, 0xe8,
+		0x96, 0xa8, 0x18, 0x5e,
+		0x0f, 0xad, 0x63, 0x35,
+	}
+	denseBytes := []byte{
+		0x11, 0xe8, 0x8a, 0xb4,
+		0x77, 0xb9, 0x9c, 0xea,
+		0x96, 0xa8, 0x18, 0x5e,
+		0x0f, 0xad, 0x63, 0x35,
+	}
+
+	checkBinary(t, "Nil()", allZeroes[:], Nil().StandardBytes())
+	checkGenerated(t, "New()", New().StandardBytes())
+	checkBinary(t, "MustFromBytes(S)", standardBytes, MustFromBytes(standardBytes).StandardBytes())
+	checkBinary(t, "MustFromBytes(D)", standardBytes, MustFromBytes(denseBytes).StandardBytes())
+	checkBinary(t, "MustFromString()", standardBytes, MustFromString(text).StandardBytes())
+
+	var u0, u1, u2, u3, u4 UUID
+	var e0, e1, e2, e3, e4 error
+
+	u0, e0 = FromBytes(standardBytes)
+	u1, e1 = FromBytes(denseBytes)
+	u2, e2 = FromString(text)
+	checkOp(t, "FromBytes(S)", standardBytes, u0, e0)
+	checkOp(t, "FromBytes(D)", standardBytes, u1, e1)
+	checkOp(t, "FromString()", standardBytes, u2, e2)
+
+	u0 = UUID{}
+	u1 = UUID{}
+	u2 = UUID{}
+
+	u0.MustFromBytes(standardBytes)
+	u1.MustFromBytes(denseBytes)
+	u2.MustFromString(text)
+	checkBinary(t, "UUID.MustFromBytes(S)", standardBytes, u0.StandardBytes())
+	checkBinary(t, "UUID.MustFromBytes(D)", standardBytes, u1.StandardBytes())
+	checkBinary(t, "UUID.MustFromString()", standardBytes, u2.StandardBytes())
+
+	u0 = UUID{}
+	u1 = UUID{}
+	u2 = UUID{}
+
+	e0 = u0.FromStandardBytes(standardBytes)
+	e1 = u1.FromDenseBytes(denseBytes)
+	e2 = u2.FromBytes(standardBytes)
+	e3 = u3.FromBytes(denseBytes)
+	e4 = u4.FromString(text)
+	checkOp(t, "UUID.FromStandardBytes()", standardBytes, u0, e0)
+	checkOp(t, "UUID.FromDenseBytes()", standardBytes, u1, e1)
+	checkOp(t, "UUID.FromBytes(S)", standardBytes, u2, e2)
+	checkOp(t, "UUID.FromBytes(D)", standardBytes, u3, e3)
+	checkOp(t, "UUID.FromString()", standardBytes, u4, e4)
+
+	u0 = UUID{}
+	u1 = UUID{}
+	u2 = UUID{}
+	u3 = UUID{}
+	u4 = UUID{}
+
+	u1.SetPreferences(Preferences{Binary, StandardFirst, Bracketed})
+	u3.SetPreferences(u1.Preferences())
+
+	u0.MustFromString(text)
+	u0.SetNil()
+	u1.MustFromString(text)
+	u1.SetNil()
+	checkBinary(t, "UUID.SetNil()", allZeroes[:], u0.StandardBytes())
+	checkBinary(t, "UUID.SetNil()", allZeroes[:], u1.StandardBytes())
+	checkVersion(t, "u0 after UUID.SetNil()", 0, u0)
+	checkVariant(t, "u0 after UUID.SetNil()", 0, u0)
+	checkValid(t, "u0 after UUID.SetNil()", false, u0)
+	checkPrefs(t, "u0 after UUID.SetNil()", Text, DenseFirst, Dense, u0)
+	checkPrefs(t, "u1 after UUID.SetNil()", Binary, StandardFirst, Bracketed, u1)
+	checkEqual(t, "Equal", true, u0, u1)
+
+	u2.MustFromString(text)
+	u3.MustFromString(text)
+	checkBinary(t, "UUID.MustFromString()", standardBytes, u2.StandardBytes())
+	checkBinary(t, "UUID.MustFromString()", standardBytes, u3.StandardBytes())
+	checkVersion(t, "u2 after UUID.MustFromString()", V1, u2)
+	checkVariant(t, "u2 after UUID.MustFromString()", VariantRFC4122, u2)
+	checkValid(t, "u2 after UUID.MustFromString()", true, u2)
+	checkPrefs(t, "u2 after UUID.MustFromString()", Text, DenseFirst, Dense, u2)
+	checkPrefs(t, "u3 after UUID.MustFromString()", Binary, StandardFirst, Bracketed, u3)
+	checkEqual(t, "Equal", true, u2, u3)
+	checkEqual(t, "Equal", false, u0, u2)
+
+	u0 = UUID{}
+	u1 = UUID{}
+	u2 = UUID{}
+	u3 = UUID{}
+
+	u0.SetNew()
+	u1.SetNew()
+	checkGenerated(t, "SetNew()", u0.StandardBytes())
+	checkGenerated(t, "SetNew()", u1.StandardBytes())
+}
+
+func TestUUID_FromString(t *testing.T) {
 	standardBytes := []byte{
 		0x77, 0xb9, 0x9c, 0xea,
 		0x8a, 0xb4, 0x11, 0xe8,
@@ -225,7 +323,56 @@ func TestFromString(t *testing.T) {
 	}
 	data := []testrow{
 		{
+			input:  "",
+			output: allZeroes[:],
+		},
+		{
+			input:  "00000000-0000-0000-0000-000000000000",
+			output: allZeroes[:],
+		},
+		{
+			input:  "00000000 0000 0000 0000 000000000000",
+			output: allZeroes[:],
+		},
+		{
+			input:  "00000000000000000000000000000000",
+			output: allZeroes[:],
+		},
+		{
+			input:  "{00000000000000000000000000000000}",
+			output: allZeroes[:],
+		},
+		{
+			input:  "urn:uuid:00000000000000000000000000000000",
+			output: allZeroes[:],
+		},
+		{
+			input:  "urn:uuid:{00000000000000000000000000000000}",
+			output: allZeroes[:],
+		},
+
+		{
 			input:  "77b99cea-8ab4-11e8-96a8-185e0fad6335",
+			output: standardBytes,
+		},
+		{
+			input:  "{77b99cea-8ab4-11e8-96a8-185e0fad6335}",
+			output: standardBytes,
+		},
+		{
+			input:  "urn:uuid:77b99cea-8ab4-11e8-96a8-185e0fad6335",
+			output: standardBytes,
+		},
+		{
+			input:  "urn:uuid:{77b99cea-8ab4-11e8-96a8-185e0fad6335}",
+			output: standardBytes,
+		},
+		{
+			input:  "77b99cea8ab411e896a8185e0fad6335",
+			output: standardBytes,
+		},
+		{
+			input:  "77B99CEA8AB411E896A8185E0FAD6335",
 			output: standardBytes,
 		},
 		{
@@ -273,7 +420,23 @@ func TestFromString(t *testing.T) {
 			input:   "77b99cea-8ab4-11e8-96a8-185e0fad6335x", // add 'x' at end
 			failure: true,
 		},
+		{
+			input:   "{77b99cea-8ab4-11e8-96a8-185e0fad6335", // '{' without '}'
+			failure: true,
+		},
+		{
+			input:   "77b99cea-{8ab4-11e8-96a8-185e0fad6335}", // '{' in weird place
+			failure: true,
+		},
+		{
+			input:   "{77b99cea-8ab4-11e8-96a8}-185e0fad6335", // '}' in weird place
+			failure: true,
+		},
 
+		{
+			input:  "@AZaz09+/-_AAAAAAAAAAAA",
+			output: nil,
+		},
 		{
 			input:  "@EeiKtHe5nOqWqBheD61jNQ",
 			output: standardBytes,
@@ -296,7 +459,15 @@ func TestFromString(t *testing.T) {
 		},
 
 		{
+			input:   "@EeiKtHe5!nOqWqBheD61jNQ", // add '!'
+			failure: true,
+		},
+		{
 			input:   "@EeiKtHe5nOqWqBheD61j", // delete 'NQ'
+			failure: true,
+		},
+		{
+			input:   "@EeiKtHe5nOqWqBheD61jN/", // 'Q' -> '/'
 			failure: true,
 		},
 		{
@@ -371,7 +542,9 @@ func TestFromString(t *testing.T) {
 	}
 }
 
-func TestUnmarshalBinary(t *testing.T) {
+func TestUUID_UnmarshalBinary(t *testing.T) {
+	zero := "00000000-0000-0000-0000-000000000000"
+
 	text := "77b99cea-8ab4-11e8-96a8-185e0fad6335"
 	standardBytes := []byte{
 		0x77, 0xb9, 0x9c, 0xea,
@@ -386,11 +559,20 @@ func TestUnmarshalBinary(t *testing.T) {
 		0x0f, 0xad, 0x63, 0x35,
 	}
 
-	text0 := "11d3c015-c015-11d3-96a8-185e0fad6335"
-	text1 := "c01511d3-c015-11d3-96a8-185e0fad6335"
-	ambiguousBytes := []byte{
+	ambiguousText0A := "11d3c015-c015-11d3-96a8-185e0fad6335"
+	ambiguousText0B := "c01511d3-c015-11d3-96a8-185e0fad6335"
+	ambiguousBytes0 := []byte{
 		0x11, 0xd3, 0xc0, 0x15,
 		0xc0, 0x15, 0x11, 0xd3,
+		0x96, 0xa8, 0x18, 0x5e,
+		0x0f, 0xad, 0x63, 0x35,
+	}
+
+	ambiguousText1A := "11ec6a8f-6a8f-11ec-96a8-185e0fad6335"
+	ambiguousText1B := "6a8f11ec-6a8f-11ec-96a8-185e0fad6335"
+	ambiguousBytes1 := []byte{
+		0x11, 0xec, 0x6a, 0x8f,
+		0x6a, 0x8f, 0x11, 0xec,
 		0x96, 0xa8, 0x18, 0x5e,
 		0x0f, 0xad, 0x63, 0x35,
 	}
@@ -402,6 +584,16 @@ func TestUnmarshalBinary(t *testing.T) {
 		output  string
 	}
 	data := []testrow{
+		{nil, StandardOnly, true, zero},
+		{nil, DenseOnly, true, zero},
+		{nil, StandardFirst, true, zero},
+		{nil, DenseFirst, true, zero},
+
+		{allZeroes[:], StandardOnly, true, zero},
+		{allZeroes[:], DenseOnly, true, zero},
+		{allZeroes[:], StandardFirst, true, zero},
+		{allZeroes[:], DenseFirst, true, zero},
+
 		{standardBytes, StandardOnly, true, text},
 		{standardBytes, DenseOnly, false, ""},
 		{standardBytes, StandardFirst, true, text},
@@ -412,10 +604,15 @@ func TestUnmarshalBinary(t *testing.T) {
 		{denseBytes, StandardFirst, true, text},
 		{denseBytes, DenseFirst, true, text},
 
-		{ambiguousBytes, StandardOnly, true, text0},
-		{ambiguousBytes, StandardFirst, true, text0},
-		{ambiguousBytes, DenseOnly, true, text1},
-		{ambiguousBytes, DenseFirst, true, text1},
+		{ambiguousBytes0, StandardOnly, true, ambiguousText0A},
+		{ambiguousBytes0, StandardFirst, true, ambiguousText0A},
+		{ambiguousBytes0, DenseOnly, true, ambiguousText0B},
+		{ambiguousBytes0, DenseFirst, true, ambiguousText0B},
+
+		{ambiguousBytes1, StandardOnly, true, ambiguousText1A},
+		{ambiguousBytes1, StandardFirst, true, ambiguousText1A},
+		{ambiguousBytes1, DenseOnly, true, ambiguousText1B},
+		{ambiguousBytes1, DenseFirst, true, ambiguousText1B},
 	}
 	for _, row := range data {
 		pref := bitsDefault.expand()
@@ -443,7 +640,7 @@ func TestUnmarshalBinary(t *testing.T) {
 	}
 }
 
-func TestUnmarshalBinaryFailure(t *testing.T) {
+func TestUUID_UnmarshalBinary_Failure(t *testing.T) {
 	data := [][]byte{
 		// Missing last byte
 		// [... ad 63 35] -> [... ad 63]
@@ -477,14 +674,104 @@ func TestUnmarshalBinaryFailure(t *testing.T) {
 		name := fmt.Sprintf("%x", item)
 		t.Run(name, func(t *testing.T) {
 			var uuid UUID
-			uuid.SetPreferences(Preferences{
-				Value:  Binary,
-				Binary: StandardOnly,
-				Text:   Canonical,
-			})
+			uuid.SetPreferences(Preferences{Binary, StandardOnly, Canonical})
 			if err := uuid.UnmarshalBinary(item); err == nil {
 				x := formatBytes(item)
 				t.Errorf("unexpected success at UnmarshalBinary %s: %s", x, uuid.CanonicalString())
+			}
+		})
+	}
+}
+
+func TestUUID_JSON(t *testing.T) {
+	standardBytes := []byte{
+		0x77, 0xb9, 0x9c, 0xea,
+		0x8a, 0xb4, 0x11, 0xe8,
+		0x96, 0xa8, 0x18, 0x5e,
+		0x0f, 0xad, 0x63, 0x35,
+	}
+
+	zero := "00000000-0000-0000-0000-000000000000"
+	zeroDense := "@AAAAAAAAAAAAAAAAAAAAAA"
+	text := "77b99cea-8ab4-11e8-96a8-185e0fad6335"
+	textDense := "@EeiKtHe5nOqWqBheD61jNQ"
+
+	zeroJSON := `"` + zero + `"`
+	textJSON := `"` + text + `"`
+	textDenseJSON := `"` + textDense + `"`
+	zeroDenseJSON := `"` + zeroDense + `"`
+
+	var u UUID
+	u.SetPreferences(Preferences{0, 0, Canonical})
+	checkMarshalJSON(t, "canon nil", zeroJSON, u)
+	u.MustFromString(text)
+	checkMarshalJSON(t, "canon real", textJSON, u)
+	u.SetPreferences(Preferences{0, 0, Dense})
+	checkMarshalJSON(t, "dense real", textDenseJSON, u)
+	u.SetNil()
+	checkMarshalJSON(t, "dense nil", zeroDenseJSON, u)
+
+	checkUnmarshalJSON(t, "canon nil", allZeroes[:], zeroJSON)
+	checkUnmarshalJSON(t, "canon real", standardBytes, textJSON)
+	checkUnmarshalJSON(t, "dense nil", allZeroes[:], zeroDenseJSON)
+	checkUnmarshalJSON(t, "dense real", standardBytes, textDenseJSON)
+	checkUnmarshalJSON(t, "JSON empty string", allZeroes[:], `""`)
+	checkUnmarshalJSON(t, "JSON null", allZeroes[:], `null`)
+	checkUnmarshalJSON(t, "JSON omit", allZeroes[:], ``)
+}
+
+func TestUUID_Scan(t *testing.T) {
+	zero := "00000000-0000-0000-0000-000000000000"
+	text := "77b99cea-8ab4-11e8-96a8-185e0fad6335"
+	standardBytes := []byte{
+		0x77, 0xb9, 0x9c, 0xea,
+		0x8a, 0xb4, 0x11, 0xe8,
+		0x96, 0xa8, 0x18, 0x5e,
+		0x0f, 0xad, 0x63, 0x35,
+	}
+	denseBytes := []byte{
+		0x11, 0xe8, 0x8a, 0xb4,
+		0x77, 0xb9, 0x9c, 0xea,
+		0x96, 0xa8, 0x18, 0x5e,
+		0x0f, 0xad, 0x63, 0x35,
+	}
+
+	type testrow struct {
+		name    string
+		input   interface{}
+		success bool
+		output  string
+	}
+	data := []testrow{
+		{"nil", nil, true, zero},
+		{"bytes-nil", []byte(nil), true, zero},
+		{"bytes-zero", allZeroes[:], true, zero},
+		{"bytes-std", standardBytes, true, text},
+		{"bytes-dense", denseBytes, true, text},
+		{"string-empty", "", true, zero},
+		{"string-zero", zero, true, zero},
+		{"string-text", text, true, text},
+	}
+	for _, row := range data {
+		pref := bitsDefault.expand()
+		pref.Binary = DenseFirst
+		t.Run(row.name, func(t *testing.T) {
+			var uuid UUID
+			uuid.SetPreferences(pref)
+			err := uuid.Scan(row.input)
+			output := uuid.CanonicalString()
+
+			switch {
+			case err != nil && row.success:
+				t.Errorf("failed to Scan %[1]T %[1]v: %v", row.input, err)
+
+			case err == nil && !row.success:
+				t.Errorf("unexpected success at Scan %[1]T %[1]v: %q", row.input, output)
+
+			case err == nil:
+				if row.output != output {
+					t.Errorf("flubbed Scan %[1]T %[1]v: expected %q, got %q", row.input, row.output, output)
+				}
 			}
 		})
 	}
@@ -494,7 +781,7 @@ func justBytes(ba []byte, _ error) []byte {
 	return ba
 }
 
-func justVariant(v interface{}, _ error) interface{} {
+func justValue(v interface{}, _ error) interface{} {
 	return v
 }
 
@@ -519,7 +806,27 @@ func checkBinary(t *testing.T, opName string, ba0, ba1 []byte) {
 	}
 }
 
-func checkVariant(t *testing.T, opName string, v0, v1 interface{}) {
+func checkGenerated(t *testing.T, opName string, ba []byte) {
+	if !isSystemGenerated(ba) {
+		x := formatBytes(ba)
+		t.Errorf("flubbed %s:\n\t  actual: %s", opName, x)
+	}
+}
+
+func checkOp(t *testing.T, opName string, expect []byte, u UUID, err error) {
+	if err != nil {
+		t.Errorf("failed to %s: got %#v", opName, err)
+		return
+	}
+	actual := u.StandardBytes()
+	if !equalBytes(expect, actual) {
+		x := formatBytes(expect)
+		y := formatBytes(actual)
+		t.Errorf("flubbed %s: expected %q, got %q", opName, x, y)
+	}
+}
+
+func checkValue(t *testing.T, opName string, v0, v1 interface{}) {
 	s0, ok0 := v0.(string)
 	s1, ok1 := v1.(string)
 	if ok0 && ok1 {
@@ -535,6 +842,85 @@ func checkVariant(t *testing.T, opName string, v0, v1 interface{}) {
 	}
 
 	t.Errorf("flubbed %s: expected type %T, got type %T", opName, v0, v1)
+}
+
+func checkEqual(t *testing.T, opName string, expect bool, u0, u1 UUID) {
+	actual := Equal(u0, u1)
+	if expect != actual {
+		x := formatBytes(u0.StandardBytes())
+		y := formatBytes(u1.StandardBytes())
+		t.Errorf("flubbed %s: expected %v, got %v\n\t%s\n\t%s", opName, expect, actual, x, y)
+	}
+}
+
+func checkVersion(t *testing.T, context string, expect Version, u UUID) {
+	actual := u.Version()
+	if expect != actual {
+		t.Errorf("%s: expected Version() = %v, got %v", context, expect, actual)
+	}
+}
+
+func checkVariant(t *testing.T, context string, expect Variant, u UUID) {
+	actual := u.Variant()
+	if expect != actual {
+		t.Errorf("%s: expected Variant() = %v, got %v", context, expect, actual)
+	}
+}
+
+func checkValid(t *testing.T, context string, expect bool, u UUID) {
+	actual := u.IsValid()
+	if expect != actual {
+		t.Errorf("%s: expected IsValid() = %v, got %v", context, expect, actual)
+	}
+}
+
+func checkV1(t *testing.T, context string, expect bool, u UUID) {
+	actual := u.IsV1()
+	if expect != actual {
+		t.Errorf("%s: expected IsV1() = %v, got %v", context, expect, actual)
+	}
+}
+
+func checkPrefs(t *testing.T, context string, vm ValueMode, bm BinaryMode, tm TextMode, u UUID) {
+	p := u.Preferences()
+	if vm != 0 && p.Value != vm {
+		t.Errorf("%s: wrong Preferences.Value: expected %q, got %q", context, vm, p.Value)
+	}
+	if bm != 0 && p.Binary != bm {
+		t.Errorf("%s: wrong Preferences.Binary: expected %q, got %q", context, bm, p.Binary)
+	}
+	if tm != 0 && p.Text != tm {
+		t.Errorf("%s: wrong Preferences.Text: expected %q, got %q", context, tm, p.Text)
+	}
+}
+
+func checkMarshalJSON(t *testing.T, context string, expect string, u UUID) {
+	raw, err := u.MarshalJSON()
+	if err != nil {
+		t.Errorf("%s: MarshalJSON failed: %#v", context, err)
+		return
+	}
+	actual := string(raw)
+	if expect != actual {
+		x := formatBytes(u.StandardBytes())
+		t.Errorf("%s: flubbed MarshalJSON: expected %q, got %q\n\t%s", context, expect, actual, x)
+	}
+}
+
+func checkUnmarshalJSON(t *testing.T, context string, expect []byte, input string) {
+	var u UUID
+	u.MustFromString("77b99cea-8ab4-11e8-96a8-185e0fad6335")
+	err := u.UnmarshalJSON([]byte(input))
+	if err != nil {
+		t.Errorf("%s: UnmarshalJSON failed: %#v", context, err)
+		return
+	}
+	actual := u.StandardBytes()
+	if !equalBytes(expect, actual) {
+		x := formatBytes(expect)
+		y := formatBytes(actual)
+		t.Errorf("%s: flubbed UnmarshalJSON: expected %s, got %s\n\t%s", context, x, y, input)
+	}
 }
 
 func compose(list ...func(string) string) func(string) string {

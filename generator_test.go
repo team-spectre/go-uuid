@@ -3,7 +3,12 @@ package uuid
 import (
 	"encoding/hex"
 	"fmt"
+	"io"
+	"math/rand"
+	"net"
+	"sync"
 	"testing"
+	"time"
 )
 
 type order int8
@@ -358,5 +363,75 @@ func TestIsSuitable(t *testing.T) {
 
 func TestSystemGenerate(t *testing.T) {
 	g := globalState()
-	g.generate(make([]byte, 16))
+	p := make([]byte, ByteLength)
+	g.generate(p)
+	if !isSystemGenerated(p) {
+		t.Errorf("flubbed generate: got %#02x", p)
+	}
+}
+
+func isSystemGenerated(actual []byte) bool {
+	expect := [ByteLength]byte{
+		0xb5, 0xba, 0x40, 0x00,
+		0xee, 0x86, 0x11, 0xe7,
+		0xff, 0xff, 0x54, 0xee,
+		0x75, 0x81, 0x2f, 0xc9,
+	}
+	if len(expect) != len(actual) {
+		return false
+	}
+	for i, x := range expect {
+		y := actual[i]
+		if x != y && x != 0xff {
+			return false
+		}
+	}
+	return true
+}
+
+type mockRandomReader struct {
+	mu  sync.Mutex
+	rnd *rand.Rand
+}
+
+func newMockRandomReader(seed int64) io.Reader {
+	return &mockRandomReader{
+		rnd: rand.New(rand.NewSource(seed)),
+	}
+}
+
+func (r *mockRandomReader) Read(p []byte) (int, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.rnd.Read(p)
+}
+
+func mockInterfaces() ([]net.Interface, error) {
+	return []net.Interface{
+		{
+			Index:        1,
+			MTU:          65536,
+			Name:         "lo",
+			HardwareAddr: net.HardwareAddr{},
+			Flags:        net.FlagUp | net.FlagLoopback,
+		},
+		{
+			Index:        2,
+			MTU:          1500,
+			Name:         "eth0",
+			HardwareAddr: net.HardwareAddr{0x54, 0xee, 0x75, 0x81, 0x2f, 0xc9},
+			Flags:        net.FlagUp | net.FlagBroadcast | net.FlagMulticast,
+		},
+	}, nil
+}
+
+func mockNow() time.Time {
+	return time.Unix(1514764800, 0) // 2018-01-01 00:00:00Z
+}
+
+func init() {
+	gInterfaces = ifaceFunc(mockInterfaces)
+	gNow = nowFunc(mockNow)
+	gReader = newMockRandomReader(42)
+	globalState()
 }

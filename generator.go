@@ -4,10 +4,18 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"fmt"
+	"io"
 	"net"
 	"sync"
 	"time"
 )
+
+type ifaceFunc func() ([]net.Interface, error)
+type nowFunc func() time.Time
+
+var gInterfaces ifaceFunc = net.Interfaces
+var gNow nowFunc = time.Now
+var gReader io.Reader = rand.Reader
 
 var gStateOnce sync.Once
 var gState *state
@@ -100,15 +108,15 @@ func (state *state) generate(out []byte) {
 }
 
 func mustReadRandom(p []byte) {
-	n, err := rand.Read(p)
+	n, err := io.ReadFull(gReader, p)
 	if n == len(p) && err == nil {
 		return
 	}
-	panic(fmt.Errorf("crypto/rand.Read %d: %d, %v", len(p), n, err))
+	panic(fmt.Errorf("io.ReadFull %d: %d, %v", len(p), n, err))
 }
 
 func systemTick() uint64 {
-	value := uint64(time.Now().UnixNano()/100) + tickEpoch
+	value := uint64(gNow().UnixNano()/100) + tickEpoch
 	return value & tickMask
 }
 
@@ -120,7 +128,7 @@ func systemSequence() uint16 {
 }
 
 func systemAddress() (out [6]byte) {
-	ifaces, err := net.Interfaces()
+	ifaces, err := gInterfaces()
 	if err == nil {
 		// Search for a suitable MAC address
 		for _, iface := range ifaces {

@@ -2,6 +2,7 @@ package uuid
 
 import (
 	"fmt"
+	"io"
 )
 
 type sliceReader struct {
@@ -62,9 +63,15 @@ func (r *sliceReader) Unread(n uint) {
 	r.i = r.checkRewindI(n)
 }
 
-func (r *sliceReader) Read(p []byte) {
-	slice := r.Grab(uint(len(p)))
-	copy(p, slice)
+func (r *sliceReader) Read(p []byte) (int, error) {
+	var err error
+	k := uint(len(p))
+	if r.i+k > r.j {
+		err = io.EOF
+		k = r.j - r.i
+	}
+	copy(p[:k], r.Grab(k))
+	return int(k), err
 }
 
 func (r *sliceReader) ReadByte() byte {
