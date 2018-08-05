@@ -1,11 +1,12 @@
 language: go
 go:
-- '1.10'
+- 1.10.x
 install:
-- 'go get golang.org/x/tools/cmd/cover'
-- 'go get github.com/mattn/goveralls'
+- go get golang.org/x/tools/cmd/cover
+- go get github.com/mattn/goveralls
+- go get -t ./...
 script:
-- 'go test -v -covermode=count -coverprofile=coverage.out ./...'
-- '$HOME/gopath/bin/goveralls -coverprofile=coverage.out -service=travis-ci -repotoken="$COVERALLS_TOKEN"'
+- go test -v -covermode=count -coverprofile=coverage.out ./...
+- "$HOME/gopath/bin/goveralls -coverprofile=coverage.out -service=travis-ci"
 env:
-- secure: 'Jb/jEd22a+Tb4++wKCBSlfqfoE8OL/PrRM8DEen8Blq89PldPfbjy2aS7BXTHGjSHmLK72ypNpoqpSPCJSCFA5/xqnl8cXxs8WHaEYRZFyj1uPCm9KtWQSqq+5Ab44BIg7NL0pn6Pb+7hGFeU31Ntp6SVrbVfe/Zb5iIskm5qLrT2+/xVmH+ZzPN70A5qZL0Kw0BrIeFtbDlhnKSQsDDjHvd1XEZwU4kLksQFjT/D8QkqTPxfRFANcVwfN4WQmxV5GATnPVMvqBwdGknzpmP/GodYAi7Zd3syMtLoktInMnWqIJ+3TnjJo3YXv3XZH3JEGwdxY+TeV5G4Ldcl9OkR+KJrKkBW3zwHyGTt4QkkIVJxIyG+IQ6KMsl2O+aNlbbAwKn8UOcd9+IGAlQChytsg/b90BYV1UKe4gd9QAD36acVnFxTNB5QRduJcwdl577qoXMYJmBvI6mnbTQ3epN5wwnsCy1n28YdrONRlqC2oTFN6ppRK/xoDt7DsXqGBZnROZQhF26pMbIJ8NowNfGCFiVNNV5K/R+Z/fYmEsBOoymdeCYq8+MTqNE0sie4J13ER0H8/fBdL/e3AOq8oA8QquHACtBGN5pL4wV9ejjWwSroJliAwGOpteVkv7Py7HMrNZFlqjSfJ5/kUGCpqAuBNkDnaKhU3srM9K59FhAULI='
+- secure: Jb/jEd22a+Tb4++wKCBSlfqfoE8OL/PrRM8DEen8Blq89PldPfbjy2aS7BXTHGjSHmLK72ypNpoqpSPCJSCFA5/xqnl8cXxs8WHaEYRZFyj1uPCm9KtWQSqq+5Ab44BIg7NL0pn6Pb+7hGFeU31Ntp6SVrbVfe/Zb5iIskm5qLrT2+/xVmH+ZzPN70A5qZL0Kw0BrIeFtbDlhnKSQsDDjHvd1XEZwU4kLksQFjT/D8QkqTPxfRFANcVwfN4WQmxV5GATnPVMvqBwdGknzpmP/GodYAi7Zd3syMtLoktInMnWqIJ+3TnjJo3YXv3XZH3JEGwdxY+TeV5G4Ldcl9OkR+KJrKkBW3zwHyGTt4QkkIVJxIyG+IQ6KMsl2O+aNlbbAwKn8UOcd9+IGAlQChytsg/b90BYV1UKe4gd9QAD36acVnFxTNB5QRduJcwdl577qoXMYJmBvI6mnbTQ3epN5wwnsCy1n28YdrONRlqC2oTFN6ppRK/xoDt7DsXqGBZnROZQhF26pMbIJ8NowNfGCFiVNNV5K/R+Z/fYmEsBOoymdeCYq8+MTqNE0sie4J13ER0H8/fBdL/e3AOq8oA8QquHACtBGN5pL4wV9ejjWwSroJliAwGOpteVkv7Py7HMrNZFlqjSfJ5/kUGCpqAuBNkDnaKhU3srM9K59FhAULI=
