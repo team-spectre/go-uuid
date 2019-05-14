@@ -4,7 +4,7 @@ A database-friendly implementation of Universally Unique Identifiers for Go.
 
 [![License](https://img.shields.io/github/license/team-spectre/go-uuid.svg?maxAge=86400)](https://github.com/team-spectre/go-uuid/blob/master/LICENSE)
 [![GoDoc](https://godoc.org/github.com/team-spectre/go-uuid?status.svg)](https://godoc.org/github.com/team-spectre/go-uuid)
-[![Build Status](https://img.shields.io/travis/team-spectre/go-uuid.svg?maxAge=3600&logo=travis)](https://travis-ci.org/team-spectre/go-uuid)
+[![Build Status](https://img.shields.io/travis/com/team-spectre/go-uuid.svg?maxAge=3600&logo=travis)](https://travis-ci.com/team-spectre/go-uuid)
 [![Issues](https://img.shields.io/github/issues/team-spectre/go-uuid.svg?maxAge=7200&logo=github)](https://github.com/team-spectre/go-uuid/issues)
 [![Pull Requests](https://img.shields.io/github/issues-pr/team-spectre/go-uuid.svg?maxAge=7200&logo=github)](https://github.com/team-spectre/go-uuid/pulls)
 [![Latest Release](https://img.shields.io/github/release/team-spectre/go-uuid.svg?maxAge=2592000&logo=github)](https://github.com/team-spectre/go-uuid/releases)
