@@ -2,18 +2,17 @@
 
 A database-friendly implementation of Universally Unique Identifiers for Go.
 
-[![License](https://img.shields.io/github/license/chronos-tachyon/go-uuid.svg?maxAge=86400)](https://github.com/chronos-tachyon/go-uuid/blob/master/LICENSE)
-[![GoDoc](https://godoc.org/github.com/chronos-tachyon/go-uuid?status.svg)](https://godoc.org/github.com/chronos-tachyon/go-uuid)
-[![Build Status](https://img.shields.io/travis/chronos-tachyon/go-uuid.svg?maxAge=3600&logo=travis)](https://travis-ci.org/chronos-tachyon/go-uuid)
-[![Coverage Status](https://img.shields.io/coveralls/github/chronos-tachyon/go-uuid.svg?maxAge=3600&logo=travis)](https://coveralls.io/github/chronos-tachyon/go-uuid)
-[![Issues](https://img.shields.io/github/issues/chronos-tachyon/go-uuid.svg?maxAge=7200&logo=github)](https://github.com/chronos-tachyon/go-uuid/issues)
-[![Pull Requests](https://img.shields.io/github/issues-pr/chronos-tachyon/go-uuid.svg?maxAge=7200&logo=github)](https://github.com/chronos-tachyon/go-uuid/pulls)
-[![Latest Release](https://img.shields.io/github/release/chronos-tachyon/go-uuid.svg?maxAge=2592000&logo=github)](https://github.com/chronos-tachyon/go-uuid/releases)
+[![License](https://img.shields.io/github/license/team-spectre/go-uuid.svg?maxAge=86400)](https://github.com/team-spectre/go-uuid/blob/master/LICENSE)
+[![GoDoc](https://godoc.org/github.com/team-spectre/go-uuid?status.svg)](https://godoc.org/github.com/team-spectre/go-uuid)
+[![Build Status](https://img.shields.io/travis/team-spectre/go-uuid.svg?maxAge=3600&logo=travis)](https://travis-ci.org/team-spectre/go-uuid)
+[![Issues](https://img.shields.io/github/issues/team-spectre/go-uuid.svg?maxAge=7200&logo=github)](https://github.com/team-spectre/go-uuid/issues)
+[![Pull Requests](https://img.shields.io/github/issues-pr/team-spectre/go-uuid.svg?maxAge=7200&logo=github)](https://github.com/team-spectre/go-uuid/pulls)
+[![Latest Release](https://img.shields.io/github/release/team-spectre/go-uuid.svg?maxAge=2592000&logo=github)](https://github.com/team-spectre/go-uuid/releases)
 
 ## Quick Start
 
 ```
-import "github.com/chronos-tachyon/go-uuid"
+import "github.com/team-spectre/go-uuid"
 
 // Generate a new version 1 UUID
 u := uuid.New()

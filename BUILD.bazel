@@ -1,6 +1,10 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 load("@bazel_gazelle//:def.bzl", "gazelle")
 
+# gazelle:prefix github.com/team-spectre/go-uuid
+# gazelle:build_file_name BUILD.bazel,BUILD
+gazelle(name = "gazelle")
+
 go_library(
     name = "go_default_library",
     srcs = [
@@ -16,7 +20,7 @@ go_library(
         "variant.go",
         "version.go",
     ],
-    importpath = "github.com/chronos-tachyon/go-uuid",
+    importpath = "github.com/team-spectre/go-uuid",
     visibility = ["//visibility:public"],
 )
 
@@ -35,11 +39,4 @@ go_test(
         "version_test.go",
     ],
     embed = [":go_default_library"],
-)
-
-gazelle(
-    name = "gazelle",
-    command = "fix",
-    external = "vendored",
-    prefix = "github.com/chronos-tachyon/go-uuid",
 )

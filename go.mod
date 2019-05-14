@@ -1,3 +1,3 @@
-module github.com/chronos-tachyon/go-uuid
+module github.com/team-spectre/go-uuid
 
 go 1.12
